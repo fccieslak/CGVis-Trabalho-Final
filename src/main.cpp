@@ -221,6 +221,10 @@ GLint g_projection_uniform;
 GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
+GLint g_light_positions_uniform;
+GLint g_light_colors_uniform;
+GLint g_light_count_uniform;
+GLint g_ambient_strength_uniform;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
@@ -394,8 +398,9 @@ int main(int argc, char* argv[])
 
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-        glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
-        glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
+        const float camera_target_y = dungeon_preview ? 1.5f : 0.0f;
+        glm::vec4 camera_position_c  = glm::vec4(x,y + camera_target_y,z,1.0f); // Ponto "c", centro da câmera
+        glm::vec4 camera_lookat_l    = glm::vec4(0.0f,camera_target_y,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
 
@@ -440,6 +445,37 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
+        const GLfloat light_positions[4][3] = {
+            {-1.25f, 2.25f, -0.95f},
+            { 1.25f, 2.25f, -0.95f},
+            {-1.05f, 2.25f,  0.0f},
+            { 1.05f, 2.25f,  0.0f}
+        };
+        const GLfloat torch_light_colors[4][3] = {
+            {3.0f, 1.45f, 0.55f},
+            {3.0f, 1.45f, 0.55f},
+            {3.0f, 1.45f, 0.55f},
+            {3.0f, 1.45f, 0.55f}
+        };
+        const GLfloat default_light_position[4][3] = {
+            {2.0f, 3.0f, 2.0f},
+            {0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f}
+        };
+        const GLfloat default_light_color[4][3] = {
+            {1.0f, 1.0f, 1.0f},
+            {0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f}
+        };
+        glUniform3fv(g_light_positions_uniform, 4,
+                     dungeon_preview ? &light_positions[0][0] : &default_light_position[0][0]);
+        glUniform3fv(g_light_colors_uniform, 4,
+                     dungeon_preview ? &torch_light_colors[0][0] : &default_light_color[0][0]);
+        glUniform1i(g_light_count_uniform, dungeon_preview ? 4 : 1);
+        glUniform1f(g_ambient_strength_uniform, dungeon_preview ? 0.16f : 0.2f);
+
         #define SPHERE 0
         #define BUNNY  1
         #define PLANE  2
@@ -457,11 +493,31 @@ int main(int argc, char* argv[])
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
             DrawVirtualObject("wall_Cube.13106");
 
-            model = Matrix_Translate(0.0f, 0.0f, 0.5f);
+            model = Matrix_Translate(-1.5f, 0.0f, 0.0f) * Matrix_Rotate_Y(1.570796f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("wall_Cube.13106");
+
+            model = Matrix_Translate(1.5f, 0.0f, 0.0f) * Matrix_Rotate_Y(-1.570796f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("wall_Cube.13106");
+
+            model = Matrix_Translate(0.0f, 0.05f, 0.5f);
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
             DrawVirtualObject("chest_Cube.11164");
 
-            model = Matrix_Translate(-1.25f, 1.8f, -1.0f);
+            model = Matrix_Translate(-1.25f, 1.8f, -1.2f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("torch_mounted_Cylinder.334");
+
+            model = Matrix_Translate(1.25f, 1.8f, -1.2f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("torch_mounted_Cylinder.334");
+
+            model = Matrix_Translate(-1.5f, 1.8f, 0.0f) * Matrix_Rotate_Y(1.570796f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("torch_mounted_Cylinder.334");
+
+            model = Matrix_Translate(1.5f, 1.8f, 0.0f) * Matrix_Rotate_Y(-1.570796f);
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
             DrawVirtualObject("torch_mounted_Cylinder.334");
         }
@@ -650,6 +706,10 @@ void LoadShadersFromFiles()
     g_object_id_uniform  = glGetUniformLocation(g_GpuProgramID, "object_id"); // Variável "object_id" em shader_fragment.glsl
     g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
     g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
+    g_light_positions_uniform = glGetUniformLocation(g_GpuProgramID, "light_positions");
+    g_light_colors_uniform = glGetUniformLocation(g_GpuProgramID, "light_colors");
+    g_light_count_uniform = glGetUniformLocation(g_GpuProgramID, "light_count");
+    g_ambient_strength_uniform = glGetUniformLocation(g_GpuProgramID, "ambient_strength");
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(g_GpuProgramID);

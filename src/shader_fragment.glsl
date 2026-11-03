@@ -33,6 +33,10 @@ uniform vec4 bbox_max;
 uniform sampler2D TextureImage0;
 uniform sampler2D TextureImage1;
 uniform sampler2D TextureImage2;
+uniform vec3 light_positions[4];
+uniform vec3 light_colors[4];
+uniform int light_count;
+uniform float ambient_strength;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -58,12 +62,6 @@ void main()
     // Normal do fragmento atual, interpolada pelo rasterizador a partir das
     // normais de cada vértice.
     vec4 n = normalize(normal);
-
-    // Vetor que define o sentido da fonte de luz em relação ao ponto atual.
-    vec4 l = normalize(vec4(1.0,1.0,0.0,0.0));
-
-    // Vetor que define o sentido da câmera em relação ao ponto atual.
-    vec4 v = normalize(camera_position - p);
 
     // Coordenadas de textura U e V
     float U = 0.0;
@@ -140,10 +138,29 @@ void main()
         Kd0 = texture(TextureImage2, texcoords).rgb;
     }
 
-    // Equação de Iluminação
-    float lambert = max(0,dot(n,l));
+    vec3 surface_normal = normalize(normal.xyz);
+    vec3 view_direction = normalize(camera_position.xyz - p.xyz);
+    vec3 lighting = ambient_strength * Kd0;
 
-    color.rgb = Kd0 * (lambert + 0.01);
+    for (int i = 0; i < light_count; ++i)
+    {
+        vec3 to_light = light_positions[i] - p.xyz;
+        float distance_to_light = length(to_light);
+        vec3 light_direction = normalize(to_light);
+        float attenuation = 1.0 / (1.0 + 0.35 * distance_to_light
+                                   + 0.22 * distance_to_light * distance_to_light);
+
+        float diffuse_strength = max(dot(surface_normal, light_direction), 0.0);
+        vec3 diffuse = Kd0 * light_colors[i] * diffuse_strength;
+
+        vec3 reflected_direction = reflect(-light_direction, surface_normal);
+        float specular_strength = pow(max(dot(view_direction, reflected_direction), 0.0), 32.0);
+        vec3 specular = 0.22 * light_colors[i] * specular_strength;
+
+        lighting += attenuation * (diffuse + specular);
+    }
+
+    color.rgb = lighting;
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:

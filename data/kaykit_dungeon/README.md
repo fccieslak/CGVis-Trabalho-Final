@@ -25,8 +25,10 @@ Compile o projeto e execute a partir de `bin/Linux`:
 ```
 
 Execute o comando no diretório `bin/Linux`. O modo opcional mostra piso,
-parede, baú e tocha com o atlas do pacote. Sem `--dungeon-preview`, o exemplo
-gráfico original continua sendo executado.
+três paredes, um baú e quatro tochas com o atlas do pacote. A iluminação usa
+Phong com luz ambiente, difusa e especular; cada tocha contribui com uma luz
+pontual quente. Sem `--dungeon-preview`, o exemplo gráfico original continua
+sendo executado.
 
 Os modelos do jogador e dos esqueletos ainda não estão incluídos: são recursos
 de personagem separados e requerem uma escolha e validação próprias de formato.
