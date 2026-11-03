@@ -227,6 +227,9 @@ GLuint g_NumLoadedTextures = 0;
 
 int main(int argc, char* argv[])
 {
+    const bool dungeon_preview =
+        argc > 1 && std::string(argv[1]) == "--dungeon-preview";
+
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
     // sistema operacional, onde poderemos renderizar com OpenGL.
     int success = glfwInit();
@@ -299,26 +302,53 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/red_brick_diff_1k.jpg");      // TextureImage0
+    LoadTextureImage("../../data/red_brick_diff_1k.jpg");        // TextureImage0
     LoadTextureImage("../../data/rocky_terrain_02_diff_1k.jpg"); // TextureImage1
 
-    // Construímos a representação de objetos geométricos através de malhas de triângulos
-    ObjModel spheremodel("../../data/sphere.obj");
-    ComputeNormals(&spheremodel);
-    BuildTrianglesAndAddToVirtualScene(&spheremodel);
-
-    ObjModel bunnymodel("../../data/bunny.obj");
-    ComputeNormals(&bunnymodel);
-    BuildTrianglesAndAddToVirtualScene(&bunnymodel);
-
-    ObjModel planemodel("../../data/plane.obj");
-    ComputeNormals(&planemodel);
-    BuildTrianglesAndAddToVirtualScene(&planemodel);
-
-    if ( argc > 1 )
+    if (dungeon_preview)
     {
-        ObjModel model(argv[1]);
-        BuildTrianglesAndAddToVirtualScene(&model);
+        LoadTextureImage("../../data/kaykit_dungeon/dungeon_texture.png"); // TextureImage2
+
+        ObjModel floor_model("../../data/kaykit_dungeon/floor_tile_large.obj");
+        ComputeNormals(&floor_model);
+        BuildTrianglesAndAddToVirtualScene(&floor_model);
+
+        ObjModel wall_model("../../data/kaykit_dungeon/wall.obj");
+        ComputeNormals(&wall_model);
+        BuildTrianglesAndAddToVirtualScene(&wall_model);
+
+        ObjModel chest_model("../../data/kaykit_dungeon/chest.obj");
+        ComputeNormals(&chest_model);
+        BuildTrianglesAndAddToVirtualScene(&chest_model);
+
+        ObjModel torch_model("../../data/kaykit_dungeon/torch_mounted.obj");
+        ComputeNormals(&torch_model);
+        BuildTrianglesAndAddToVirtualScene(&torch_model);
+
+        g_CameraDistance = 8.0f;
+        g_CameraPhi = 0.55f;
+    }
+    else
+    {
+        // Construímos a representação de objetos geométricos através de malhas de triângulos
+        ObjModel spheremodel("../../data/sphere.obj");
+        ComputeNormals(&spheremodel);
+        BuildTrianglesAndAddToVirtualScene(&spheremodel);
+
+        ObjModel bunnymodel("../../data/bunny.obj");
+        ComputeNormals(&bunnymodel);
+        BuildTrianglesAndAddToVirtualScene(&bunnymodel);
+
+        ObjModel planemodel("../../data/plane.obj");
+        ComputeNormals(&planemodel);
+        BuildTrianglesAndAddToVirtualScene(&planemodel);
+
+        if (argc > 1)
+        {
+            ObjModel model(argv[1]);
+            ComputeNormals(&model);
+            BuildTrianglesAndAddToVirtualScene(&model);
+        }
     }
 
     // Inicializamos o código para renderização de texto.
@@ -379,7 +409,7 @@ int main(int argc, char* argv[])
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float farplane  = dungeon_preview ? -50.0f : -10.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -413,28 +443,52 @@ int main(int argc, char* argv[])
         #define SPHERE 0
         #define BUNNY  1
         #define PLANE  2
+        #define DUNGEON_OBJECT 3
 
-        // Desenhamos o modelo da esfera
-        model = Matrix_Translate(-1.0f,0.0f,0.0f)
-              * Matrix_Rotate_Z(0.6f)
-              * Matrix_Rotate_X(0.2f)
-              * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SPHERE);
-        DrawVirtualObject("the_sphere");
+        if (dungeon_preview)
+        {
+            glUniform1i(g_object_id_uniform, DUNGEON_OBJECT);
 
-        // Desenhamos o modelo do coelho
-        model = Matrix_Translate(1.0f,0.0f,0.0f)
-              * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, BUNNY);
-        DrawVirtualObject("the_bunny");
+            model = Matrix_Identity();
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("floor_tile_large_Cube.13698");
 
-        // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,-1.1f,0.0f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, PLANE);
-        DrawVirtualObject("the_plane");
+            model = Matrix_Translate(0.0f, 0.0f, -1.5f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("wall_Cube.13106");
+
+            model = Matrix_Translate(0.0f, 0.0f, 0.5f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("chest_Cube.11164");
+
+            model = Matrix_Translate(-1.25f, 1.8f, -1.0f);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("torch_mounted_Cylinder.334");
+        }
+        else
+        {
+            // Desenhamos o modelo da esfera
+            model = Matrix_Translate(-1.0f,0.0f,0.0f)
+                  * Matrix_Rotate_Z(0.6f)
+                  * Matrix_Rotate_X(0.2f)
+                  * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, SPHERE);
+            DrawVirtualObject("the_sphere");
+
+            // Desenhamos o modelo do coelho
+            model = Matrix_Translate(1.0f,0.0f,0.0f)
+                  * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, BUNNY);
+            DrawVirtualObject("the_bunny");
+
+            // Desenhamos o plano do chão
+            model = Matrix_Translate(0.0f,-1.1f,0.0f);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, PLANE);
+            DrawVirtualObject("the_plane");
+        }
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
@@ -1590,4 +1644,3 @@ void PrintObjModelInfo(ObjModel* model)
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
 // vim: set spell spelllang=pt_br :
-
